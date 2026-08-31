@@ -1,0 +1,90 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-geist-sans);
+  --radius-sm: calc(var(--radius) * .65);
+  --radius-md: calc(var(--radius) * .82);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.35);
+  --radius-2xl: calc(var(--radius) * 1.7);
+}
+
+:root {
+  --background: #f8f5fb;
+  --foreground: #292331;
+  --card: #fdfcff;
+  --card-foreground: #292331;
+  --popover: #ffffff;
+  --popover-foreground: #292331;
+  --primary: #5b399a;
+  --primary-foreground: #ffffff;
+  --secondary: #eee7f7;
+  --secondary-foreground: #4a3471;
+  --muted: #f0ecf3;
+  --muted-foreground: #746d7b;
+  --accent: #eadfff;
+  --accent-foreground: #4d2f8a;
+  --destructive: #c14f42;
+  --border: #e3dde7;
+  --input: #dcd5e2;
+  --ring: #8261bd;
+  --radius: .75rem;
+}
+
+.dark {
+  --background: #211a2a;
+  --foreground: #fbf8ff;
+  --card: #2d2439;
+  --card-foreground: #fbf8ff;
+  --popover: #2d2439;
+  --popover-foreground: #fbf8ff;
+  --primary: #cbb4f7;
+  --primary-foreground: #2d1d4a;
+  --secondary: #443654;
+  --secondary-foreground: #f5efff;
+  --muted: #3a2f47;
+  --muted-foreground: #b8afc2;
+  --accent: #4c3961;
+  --accent-foreground: #f5efff;
+  --destructive: #ef8073;
+  --border: rgba(255,255,255,.12);
+  --input: rgba(255,255,255,.16);
+  --ring: #cbb4f7;
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  html { @apply scroll-smooth font-sans; }
+  body {
+    @apply bg-background text-foreground antialiased;
+    background-image: linear-gradient(rgba(91,57,154,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(91,57,154,.025) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  button, a, input, textarea, select { @apply focus-visible:outline-none; }
+}
+
+::selection { background: #d9c5fb; color: #33204f; }
