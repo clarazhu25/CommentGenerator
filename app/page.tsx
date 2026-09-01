@@ -26,18 +26,44 @@ const studentTraits = [
   'Responsible', 'Supportive', 'Thoughtful', 'Brave', 'Persistent',
 ];
 
-function exactWordCount(text: string, target: number) {
-  const words = text.trim().split(/\s+/);
-  const extras = ['Her', 'curiosity', 'and', 'persistence', 'were', 'wonderful', 'to', 'see', 'throughout', 'class'];
-  while (words.length < target) words.push(extras[(words.length - 1) % extras.length]);
-  return `${words.slice(0, target).join(' ').replace(/[.,;:]$/, '')}.`;
+function inferProject(project: string) {
+  const notes = project.toLowerCase();
+  const projectTypes: Array<[RegExp, string]> = [
+    [/game|player|enemy|score/, 'interactive game'],
+    [/website|webpage|html|css/, 'polished website'],
+    [/robot|sensor|motor/, 'working robotics project'],
+    [/animation|animated|sprite/, 'animated experience'],
+    [/quiz|question|trivia/, 'interactive quiz'],
+    [/story|comic|adventure/, 'digital story'],
+    [/app|application/, 'functional app'],
+    [/simulation|model/, 'thoughtful simulation'],
+  ];
+  const featureSignals: Array<[RegExp, string]> = [
+    [/score|point/, 'clear score tracking'],
+    [/level|stage/, 'a well-paced sense of progression'],
+    [/asteroid|enemy|obstacle|challenge/, 'carefully balanced challenges'],
+    [/win screen|end screen|ending/, 'a satisfying finish'],
+    [/sound|music|audio/, 'engaging audio feedback'],
+    [/animation|animated|sprite/, 'lively animated details'],
+    [/button|menu|navigation|page/, 'an easy-to-follow user experience'],
+    [/random|replay/, 'strong replay value'],
+    [/multiplayer|two player|2 player/, 'thoughtful collaborative play'],
+    [/data|chart|graph/, 'a clear presentation of information'],
+    [/sensor|motor|movement/, 'responsive physical behavior'],
+    [/timer|countdown/, 'well-considered timing'],
+  ];
+  const kind = projectTypes.find(([pattern]) => pattern.test(notes))?.[1] ?? 'original final project';
+  const features = featureSignals.filter(([pattern]) => pattern.test(notes)).map(([, label]) => label).slice(0, 2);
+  const highlight = features.length === 2
+    ? `${features[0]} and ${features[1]}`
+    : features[0] ?? 'careful design choices and a clear personal idea';
+  return { kind, highlight };
 }
 
 function createFeedback(name: string, course: string, topics: string, project: string, traits: string[], length: Length, version: number) {
   const firstName = name.trim().split(/\s+/)[0] || 'Your student';
   const topicList = topics.split(/,|\n/).map((topic) => topic.trim()).filter(Boolean);
   const topicPhrase = topicList.length ? topicList.length === 1 ? topicList[0] : `${topicList.slice(0, -1).join(', ')} and ${topicList.at(-1)}` : 'the core concepts from class';
-  const projectSummary = project.trim().replace(/[.!?]+$/, '');
   if (length === 'sentence') {
     const [first, second, third] = traits.map((trait) => trait.toLowerCase());
     const options = [
@@ -52,8 +78,14 @@ function createFeedback(name: string, course: string, topics: string, project: s
     `${firstName} has made meaningful progress throughout ${course}.`,
     `I have really enjoyed teaching ${firstName} in ${course}.`,
   ];
-  const paragraph = `${openings[version % openings.length]} Over the course, ${firstName} learned ${topicPhrase} and became increasingly confident using these ideas independently. For the final project, ${firstName} ${projectSummary ? projectSummary.charAt(0).toLowerCase() + projectSummary.slice(1) : 'created a thoughtful project that brought the course concepts together'}. I was especially impressed by the care put into testing, improving details, and working through challenges. ${firstName} asked thoughtful questions, listened carefully to feedback, and stayed positive when something did not work on the first try. These habits will be a strong foundation for future coding projects. Please celebrate this excellent work and continued growth!`;
-  return exactWordCount(paragraph, 100);
+  const { kind, highlight } = inferProject(project);
+  const article = /^[aeiou]/.test(kind) ? 'an' : 'a';
+  const paragraphs = [
+    `${openings[0]} Throughout the course, ${firstName} built a solid understanding of ${topicPhrase} and grew more confident applying new ideas without step-by-step support. For the final project, ${firstName} brought those skills together in ${article} ${kind}, with ${highlight} showing thoughtful planning. I was especially impressed by ${firstName}’s willingness to test, revise, and solve problems patiently. They responded well to feedback and took genuine pride in improving the experience for others. ${firstName} has developed an excellent foundation for future coding work and should feel very proud of this progress.`,
+    `${openings[1]} While exploring ${topicPhrase}, they showed increasing independence and became more comfortable turning an idea into working code. Their final ${kind} was a strong reflection of that growth; ${highlight} helped the work feel purposeful and complete. Rather than giving up when challenges appeared, ${firstName} tested different solutions and used feedback constructively. It was rewarding to see their confidence grow alongside their technical skills. ${firstName} leaves ${course} with stronger problem-solving habits, a clearer creative voice, and plenty of momentum for the next coding challenge. They should be proud of everything they accomplished.`,
+    `${openings[2]} They approached ${topicPhrase} with curiosity and steadily learned how to connect separate coding concepts into a complete experience. In the final ${kind}, ${firstName} demonstrated good judgment through ${highlight}, while also showing a clear understanding of how a user would interact with the work. Their strongest progress came from testing ideas, noticing what could be improved, and making purposeful revisions. ${firstName} listened carefully, asked useful questions, and became more independent as the course continued. These are valuable habits for any young developer, and I am excited to see where their creativity and growing confidence lead next.`,
+  ];
+  return paragraphs[version % paragraphs.length];
 }
 
 export default function Home() {
@@ -158,7 +190,7 @@ export default function Home() {
                   <p className="text-xs text-muted-foreground">These words will shape the tone of the sentence.</p>
                 </fieldset>
               ) : (
-                <div className="grid gap-2"><Label htmlFor="project">Final project</Label><Textarea id="project" value={project} onChange={(e) => setProject(e.target.value)} placeholder="What did the student make? Add a few memorable details…" className="min-h-[112px] resize-none rounded-xl border-[#ddd7e4] bg-white px-4 py-3 leading-6" /></div>
+                <div className="grid gap-2"><Label htmlFor="project">Final project notes</Label><Textarea id="project" value={project} onChange={(e) => setProject(e.target.value)} placeholder="What did the student make? Add rough notes—we’ll summarize the ideas in fresh language." className="min-h-[112px] resize-none rounded-xl border-[#ddd7e4] bg-white px-4 py-3 leading-6" /><p className="text-xs text-muted-foreground">Your notes guide the feedback and won’t be copied word for word.</p></div>
               )}
             </div>
             {error && <p role="alert" className="mt-4 rounded-lg bg-[#fff0ed] px-3 py-2 text-sm font-medium text-[#a84538]">{error}</p>}
@@ -180,7 +212,7 @@ export default function Home() {
                 <div className="mt-auto flex flex-wrap gap-3 pt-8"><Button type="button" onClick={copyFeedback} className="h-10 rounded-xl bg-white px-4 font-bold text-[#2d2439] hover:bg-[#f2ecfa]">{copied ? <><Check className="size-4 text-[#27805f]" /> Copied</> : <><Clipboard className="size-4" /> Copy feedback</>}</Button><Button type="button" onClick={() => generate()} variant="outline" className="h-10 rounded-xl border-white/15 bg-transparent px-4 text-white hover:bg-white/10 hover:text-white"><RotateCcw className="size-4" /> Try another</Button></div>
               </> : <div className="m-auto max-w-[310px] text-center"><span className="mx-auto mb-5 grid size-16 place-items-center rounded-[20px] bg-white/10 text-[#d7c2ff]"><WandSparkles className="size-7" /></span><h3 className="mb-2 text-lg font-bold">A warm note is one click away</h3><p className="text-sm leading-6 text-white/55">Complete the class details, then generate a polished message you can review and share.</p></div>}
             </div>
-            <div className="relative flex items-center gap-3 rounded-xl border border-[#73c8a7]/20 bg-[#73c8a7]/10 px-4 py-3 text-xs leading-5 text-[#c9f0e1]"><span className="grid size-7 shrink-0 place-items-center rounded-full bg-[#73c8a7]/20"><Check className="size-3.5" /></span>Specific, encouraging, and easy to personalize before sharing.</div>
+            <div className="relative flex items-center gap-3 rounded-xl border border-[#73c8a7]/20 bg-[#73c8a7]/10 px-4 py-3 text-xs leading-5 text-[#c9f0e1]"><span className="grid size-7 shrink-0 place-items-center rounded-full bg-[#73c8a7]/20"><Check className="size-3.5" /></span>Your notes are interpreted and rewritten—not copied into the response.</div>
           </section>
         </div>
         <footer className="flex flex-col justify-between gap-3 py-6 text-xs text-muted-foreground sm:flex-row"><span>Made for coding instructors who care.</span><span>Always review feedback before sending to a family.</span></footer>
