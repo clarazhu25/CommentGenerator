@@ -5,8 +5,8 @@ import { ArrowRight, Check, Clipboard, GraduationCap, RotateCcw, Sparkles, WandS
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { Textarea } from '@/components/ui/textarea';
+import { Toggle } from '@/components/ui/toggle';
 
 type Length = 'sentence' | '100';
 const sample = {
@@ -14,7 +14,17 @@ const sample = {
   course: 'Scratch Game Design',
   topics: 'variables, loops, broadcasts, debugging',
   project: 'Maya designed a space-collection game where the player gathers stars while avoiding asteroids. She added a score counter, three levels, and a win screen.',
+  traits: ['Creative', 'Persistent', 'Curious'],
 };
+
+const studentTraits = [
+  'Adaptable', 'Analytical', 'Attentive', 'Collaborative', 'Communicative',
+  'Confident', 'Consistent', 'Creative', 'Curious', 'Determined',
+  'Detail-oriented', 'Enthusiastic', 'Focused', 'Hardworking', 'Imaginative',
+  'Independent', 'Kind', 'Motivated', 'Organized', 'Patient',
+  'Positive', 'Proactive', 'Reflective', 'Resilient', 'Resourceful',
+  'Responsible', 'Supportive', 'Thoughtful', 'Brave', 'Persistent',
+];
 
 function exactWordCount(text: string, target: number) {
   const words = text.trim().split(/\s+/);
@@ -23,16 +33,17 @@ function exactWordCount(text: string, target: number) {
   return `${words.slice(0, target).join(' ').replace(/[.,;:]$/, '')}.`;
 }
 
-function createFeedback(name: string, course: string, topics: string, project: string, length: Length, version: number) {
+function createFeedback(name: string, course: string, topics: string, project: string, traits: string[], length: Length, version: number) {
   const firstName = name.trim().split(/\s+/)[0] || 'Your student';
   const topicList = topics.split(/,|\n/).map((topic) => topic.trim()).filter(Boolean);
   const topicPhrase = topicList.length ? topicList.length === 1 ? topicList[0] : `${topicList.slice(0, -1).join(', ')} and ${topicList.at(-1)}` : 'the core concepts from class';
   const projectSummary = project.trim().replace(/[.!?]+$/, '');
   if (length === 'sentence') {
+    const [first, second, third] = traits.map((trait) => trait.toLowerCase());
     const options = [
-      `${firstName} showed wonderful growth in ${course}, confidently applying ${topicPhrase} to ${projectSummary || 'a thoughtful final project'}.`,
-      `It was a pleasure teaching ${firstName}, who brought creativity and persistence to ${course} and used ${topicPhrase} to complete ${projectSummary || 'an impressive final project'}.`,
-      `${firstName} should be proud of the progress made in ${course}, especially the way ${topicPhrase} came together in ${projectSummary || 'the final project'}.`,
+      `${firstName} was ${first}, ${second}, and ${third} throughout ${course}, showing wonderful growth while learning ${topicPhrase}.`,
+      `It was a pleasure teaching ${firstName}, whose ${first}, ${second}, and ${third} attitude made their progress with ${topicPhrase} in ${course} a joy to see.`,
+      `${firstName} should feel proud of completing ${course} as a ${first}, ${second}, and ${third} learner who embraced ${topicPhrase}.`,
     ];
     return options[version % options.length];
   }
@@ -50,6 +61,7 @@ export default function Home() {
   const [course, setCourse] = useState('');
   const [topics, setTopics] = useState('');
   const [project, setProject] = useState('');
+  const [traits, setTraits] = useState<string[]>([]);
   const [length, setLength] = useState<Length>('100');
   const [feedback, setFeedback] = useState('');
   const [version, setVersion] = useState(0);
@@ -60,8 +72,12 @@ export default function Home() {
 
   function generate(event?: React.FormEvent) {
     event?.preventDefault();
-    if (!name.trim() || !course || !topics.trim() || !project.trim()) {
-      setError('Please complete each field before generating feedback.');
+    const missingCore = !name.trim() || !course.trim() || !topics.trim();
+    const missingModeDetails = length === 'sentence' ? traits.length !== 3 : !project.trim();
+    if (missingCore || missingModeDetails) {
+      setError(length === 'sentence'
+        ? 'Please complete the fields and select exactly three student strengths.'
+        : 'Please complete each field, including the final project.');
       return;
     }
     setError('');
@@ -69,19 +85,29 @@ export default function Home() {
     window.setTimeout(() => {
       const nextVersion = feedback ? version + 1 : version;
       setVersion(nextVersion);
-      setFeedback(createFeedback(name, course, topics, project, length, nextVersion));
+      setFeedback(createFeedback(name, course, topics, project, traits, length, nextVersion));
       setLoading(false);
     }, 650);
   }
 
   function useExample() {
-    setName(sample.name); setCourse(sample.course); setTopics(sample.topics); setProject(sample.project); setError('');
+    setName(sample.name); setCourse(sample.course); setTopics(sample.topics); setProject(sample.project); setTraits(sample.traits); setError('');
   }
   async function copyFeedback() {
     await navigator.clipboard.writeText(feedback); setCopied(true); window.setTimeout(() => setCopied(false), 1800);
   }
   function clearAll() {
-    setName(''); setCourse(''); setTopics(''); setProject(''); setFeedback(''); setError(''); setVersion(0);
+    setName(''); setCourse(''); setTopics(''); setProject(''); setTraits([]); setFeedback(''); setError(''); setVersion(0);
+  }
+
+  function changeLength(nextLength: Length) {
+    setLength(nextLength); setFeedback(''); setError(''); setVersion(0);
+  }
+
+  function toggleTrait(trait: string, pressed: boolean) {
+    if (pressed && traits.length < 3) setTraits((current) => [...current, trait]);
+    if (!pressed) setTraits((current) => current.filter((item) => item !== trait));
+    setError('');
   }
 
   return (
@@ -115,14 +141,25 @@ export default function Home() {
             <div className="grid gap-5">
               <div className="grid gap-2"><Label htmlFor="student-name">Student name</Label><Input id="student-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Maya Chen" className="h-11 rounded-xl border-[#ddd7e4] bg-white px-4" /></div>
               <fieldset><legend className="mb-2 text-sm font-medium">Feedback length</legend><div className="grid grid-cols-2 rounded-xl bg-[#f3eff7] p-1" aria-label="Feedback length">
-                <button type="button" aria-pressed={length === 'sentence'} onClick={() => setLength('sentence')} className={`rounded-[9px] px-3 py-2.5 text-sm font-semibold transition ${length === 'sentence' ? 'bg-white text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>One sentence</button>
-                <button type="button" aria-pressed={length === '100'} onClick={() => setLength('100')} className={`rounded-[9px] px-3 py-2.5 text-sm font-semibold transition ${length === '100' ? 'bg-white text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>About 100 words</button>
+                <button type="button" aria-pressed={length === 'sentence'} onClick={() => changeLength('sentence')} className={`rounded-[9px] px-3 py-2.5 text-sm font-semibold transition ${length === 'sentence' ? 'bg-white text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>One sentence</button>
+                <button type="button" aria-pressed={length === '100'} onClick={() => changeLength('100')} className={`rounded-[9px] px-3 py-2.5 text-sm font-semibold transition ${length === '100' ? 'bg-white text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>About 100 words</button>
               </div></fieldset>
-              <div className="grid gap-2"><Label htmlFor="course">Course</Label><NativeSelect className="w-full" value={course} onChange={(e) => setCourse(e.target.value)}>
-                <NativeSelectOption value="">Choose a course</NativeSelectOption><NativeSelectOption value="Scratch Game Design">Scratch Game Design</NativeSelectOption><NativeSelectOption value="Python Fundamentals">Python Fundamentals</NativeSelectOption><NativeSelectOption value="Roblox Game Development">Roblox Game Development</NativeSelectOption><NativeSelectOption value="Minecraft Modding">Minecraft Modding</NativeSelectOption><NativeSelectOption value="Web Development">Web Development</NativeSelectOption><NativeSelectOption value="Robotics & Engineering">Robotics &amp; Engineering</NativeSelectOption>
-              </NativeSelect></div>
+              <div className="grid gap-2"><Label htmlFor="course">Course name</Label><Input id="course" value={course} onChange={(e) => setCourse(e.target.value)} placeholder="e.g. Creative Coding with Python" className="h-11 rounded-xl border-[#ddd7e4] bg-white px-4" /></div>
               <div className="grid gap-2"><Label htmlFor="topics">Topics learned</Label><Input id="topics" value={topics} onChange={(e) => setTopics(e.target.value)} placeholder="e.g. loops, variables, event handling" className="h-11 rounded-xl border-[#ddd7e4] bg-white px-4" /><p className="text-xs text-muted-foreground">Separate topics with commas.</p></div>
-              <div className="grid gap-2"><Label htmlFor="project">Final project</Label><Textarea id="project" value={project} onChange={(e) => setProject(e.target.value)} placeholder="What did the student make? Add a few memorable details…" className="min-h-[112px] resize-none rounded-xl border-[#ddd7e4] bg-white px-4 py-3 leading-6" /></div>
+              {length === 'sentence' ? (
+                <fieldset className="grid gap-3">
+                  <div className="flex items-baseline justify-between gap-3"><legend className="text-sm font-medium">Choose three strengths</legend><span className={`text-xs font-bold ${traits.length === 3 ? 'text-[#27805f]' : 'text-muted-foreground'}`}>{traits.length} / 3 selected</span></div>
+                  <div className="flex max-h-[216px] flex-wrap gap-2 overflow-y-auto rounded-xl border border-[#ddd7e4] bg-[#fbf9fd] p-3" aria-label="Student strengths">
+                    {studentTraits.map((trait) => {
+                      const selected = traits.includes(trait);
+                      return <Toggle key={trait} pressed={selected} onPressedChange={(pressed) => toggleTrait(trait, pressed)} disabled={!selected && traits.length === 3} variant="outline" size="sm" className="h-8 rounded-full border-[#d8cfe3] bg-white px-3 text-xs text-[#61596a] shadow-none aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-white disabled:opacity-40">{selected && <Check className="size-3" />}{trait}</Toggle>;
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground">These words will shape the tone of the sentence.</p>
+                </fieldset>
+              ) : (
+                <div className="grid gap-2"><Label htmlFor="project">Final project</Label><Textarea id="project" value={project} onChange={(e) => setProject(e.target.value)} placeholder="What did the student make? Add a few memorable details…" className="min-h-[112px] resize-none rounded-xl border-[#ddd7e4] bg-white px-4 py-3 leading-6" /></div>
+              )}
             </div>
             {error && <p role="alert" className="mt-4 rounded-lg bg-[#fff0ed] px-3 py-2 text-sm font-medium text-[#a84538]">{error}</p>}
             <div className="mt-7 flex flex-wrap items-center gap-3">
