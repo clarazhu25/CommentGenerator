@@ -26,68 +26,6 @@ const studentTraits = [
   'Responsible', 'Supportive', 'Thoughtful', 'Brave', 'Persistent',
 ];
 
-function inferProject(project: string) {
-  const notes = project.toLowerCase();
-  const projectTypes: Array<[RegExp, string]> = [
-    [/game|player|enemy|score/, 'interactive game'],
-    [/website|webpage|html|css/, 'polished website'],
-    [/robot|sensor|motor/, 'working robotics project'],
-    [/animation|animated|sprite/, 'animated experience'],
-    [/quiz|question|trivia/, 'interactive quiz'],
-    [/story|comic|adventure/, 'digital story'],
-    [/app|application/, 'functional app'],
-    [/simulation|model/, 'thoughtful simulation'],
-  ];
-  const featureSignals: Array<[RegExp, string]> = [
-    [/score|point/, 'clear score tracking'],
-    [/level|stage/, 'a well-paced sense of progression'],
-    [/asteroid|enemy|obstacle|challenge/, 'carefully balanced challenges'],
-    [/win screen|end screen|ending/, 'a satisfying finish'],
-    [/sound|music|audio/, 'engaging audio feedback'],
-    [/animation|animated|sprite/, 'lively animated details'],
-    [/button|menu|navigation|page/, 'an easy-to-follow user experience'],
-    [/random|replay/, 'strong replay value'],
-    [/multiplayer|two player|2 player/, 'thoughtful collaborative play'],
-    [/data|chart|graph/, 'a clear presentation of information'],
-    [/sensor|motor|movement/, 'responsive physical behavior'],
-    [/timer|countdown/, 'well-considered timing'],
-  ];
-  const kind = projectTypes.find(([pattern]) => pattern.test(notes))?.[1] ?? 'original final project';
-  const features = featureSignals.filter(([pattern]) => pattern.test(notes)).map(([, label]) => label).slice(0, 2);
-  const highlight = features.length === 2
-    ? `${features[0]} and ${features[1]}`
-    : features[0] ?? 'careful design choices and a clear personal idea';
-  return { kind, highlight };
-}
-
-function createFeedback(name: string, course: string, topics: string, project: string, traits: string[], length: Length, version: number) {
-  const firstName = name.trim().split(/\s+/)[0] || 'Your student';
-  const topicList = topics.split(/,|\n/).map((topic) => topic.trim()).filter(Boolean);
-  const topicPhrase = topicList.length ? topicList.length === 1 ? topicList[0] : `${topicList.slice(0, -1).join(', ')} and ${topicList.at(-1)}` : 'the core concepts from class';
-  if (length === 'sentence') {
-    const [first, second, third] = traits.map((trait) => trait.toLowerCase());
-    const options = [
-      `${firstName} was ${first}, ${second}, and ${third} throughout ${course}, showing wonderful growth while learning ${topicPhrase}.`,
-      `It was a pleasure teaching ${firstName}, whose ${first}, ${second}, and ${third} attitude made their progress with ${topicPhrase} in ${course} a joy to see.`,
-      `${firstName} should feel proud of completing ${course} as a ${first}, ${second}, and ${third} learner who embraced ${topicPhrase}.`,
-    ];
-    return options[version % options.length];
-  }
-  const openings = [
-    `It has been a pleasure having ${firstName} in ${course}.`,
-    `${firstName} has made meaningful progress throughout ${course}.`,
-    `I have really enjoyed teaching ${firstName} in ${course}.`,
-  ];
-  const { kind, highlight } = inferProject(project);
-  const article = /^[aeiou]/.test(kind) ? 'an' : 'a';
-  const paragraphs = [
-    `${openings[0]} Throughout the course, ${firstName} built a solid understanding of ${topicPhrase} and grew more confident applying new ideas without step-by-step support. For the final project, ${firstName} brought those skills together in ${article} ${kind}, with ${highlight} showing thoughtful planning. I was especially impressed by ${firstName}’s willingness to test, revise, and solve problems patiently. They responded well to feedback and took genuine pride in improving the experience for others. ${firstName} has developed an excellent foundation for future coding work and should feel very proud of this progress.`,
-    `${openings[1]} While exploring ${topicPhrase}, they showed increasing independence and became more comfortable turning an idea into working code. Their final ${kind} was a strong reflection of that growth; ${highlight} helped the work feel purposeful and complete. Rather than giving up when challenges appeared, ${firstName} tested different solutions and used feedback constructively. It was rewarding to see their confidence grow alongside their technical skills. ${firstName} leaves ${course} with stronger problem-solving habits, a clearer creative voice, and plenty of momentum for the next coding challenge. They should be proud of everything they accomplished.`,
-    `${openings[2]} They approached ${topicPhrase} with curiosity and steadily learned how to connect separate coding concepts into a complete experience. In the final ${kind}, ${firstName} demonstrated good judgment through ${highlight}, while also showing a clear understanding of how a user would interact with the work. Their strongest progress came from testing ideas, noticing what could be improved, and making purposeful revisions. ${firstName} listened carefully, asked useful questions, and became more independent as the course continued. These are valuable habits for any young developer, and I am excited to see where their creativity and growing confidence lead next.`,
-  ];
-  return paragraphs[version % paragraphs.length];
-}
-
 export default function Home() {
   const [name, setName] = useState('');
   const [course, setCourse] = useState('');
@@ -96,13 +34,12 @@ export default function Home() {
   const [traits, setTraits] = useState<string[]>([]);
   const [length, setLength] = useState<Length>('100');
   const [feedback, setFeedback] = useState('');
-  const [version, setVersion] = useState(0);
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const wordCount = useMemo(() => feedback ? feedback.trim().split(/\s+/).length : 0, [feedback]);
 
-  function generate(event?: React.FormEvent) {
+  async function generate(event?: React.FormEvent) {
     event?.preventDefault();
     const missingCore = !name.trim() || !course.trim() || !topics.trim();
     const missingModeDetails = length === 'sentence' ? traits.length !== 3 : !project.trim();
@@ -114,12 +51,28 @@ export default function Home() {
     }
     setError('');
     setLoading(true);
-    window.setTimeout(() => {
-      const nextVersion = feedback ? version + 1 : version;
-      setVersion(nextVersion);
-      setFeedback(createFeedback(name, course, topics, project, traits, length, nextVersion));
+    try {
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          course: course.trim(),
+          topics: topics.trim(),
+          project: length === '100' ? project.trim() : '',
+          traits: length === 'sentence' ? traits : [],
+          length,
+          previousFeedback: feedback,
+        }),
+      });
+      const data = await response.json() as { feedback?: string; error?: string };
+      if (!response.ok || !data.feedback) throw new Error(data.error || 'Feedback could not be generated.');
+      setFeedback(data.feedback);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'Feedback could not be generated.');
+    } finally {
       setLoading(false);
-    }, 650);
+    }
   }
 
   function useExample() {
@@ -129,11 +82,11 @@ export default function Home() {
     await navigator.clipboard.writeText(feedback); setCopied(true); window.setTimeout(() => setCopied(false), 1800);
   }
   function clearAll() {
-    setName(''); setCourse(''); setTopics(''); setProject(''); setTraits([]); setFeedback(''); setError(''); setVersion(0);
+    setName(''); setCourse(''); setTopics(''); setProject(''); setTraits([]); setFeedback(''); setError('');
   }
 
   function changeLength(nextLength: Length) {
-    setLength(nextLength); setFeedback(''); setError(''); setVersion(0);
+    setLength(nextLength); setFeedback(''); setError('');
   }
 
   function toggleTrait(trait: string, pressed: boolean) {
