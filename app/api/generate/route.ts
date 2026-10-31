@@ -65,7 +65,7 @@ export async function POST(request: Request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5.6-luna',
+        model: 'gpt-6-luna',
         store: false,
         temperature: 0.95,
         reasoning: { effort: 'none' },
